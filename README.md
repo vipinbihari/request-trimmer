@@ -20,10 +20,6 @@ Request Trimmer is a Python tool that automatically identifies and removes unnec
 git clone https://github.com/your-username/request-trimmer.git # Replace with actual URL
 cd request-trimmer
 
-# (Optional but recommended) Create and activate a virtual environment
-python3 -m venv venv
-source venv/bin/activate # On Windows use `venv\Scripts\activate`
-
 # Install dependencies
 pip install -r requirements.txt
 ```
@@ -33,18 +29,14 @@ pip install -r requirements.txt
 Run the tool from the project's root directory using the `run_trimmer.py` script:
 
 ```bash
-python3 run_trimmer.py <request_file_path> [options]
+python3 run_trimmer.py <raw_http_request_file_path> [options]
 ```
 
-Alternatively, you can run `main.py` directly:
 
-```bash
-python3 main.py <request_file_path> [options]
-```
 
 ### Arguments and Options
 
-*   `request_file` (Required): Path to the file containing the raw HTTP request.
+*   `raw_http_request_file_path` (Required): Path to the file containing the raw HTTP request.
 *   `-o`, `--output`: Path to save the trimmed request file. If omitted, the trimmed request is printed to standard output.
 *   `--base-url`: Specify the base URL (e.g., `https://example.com`) if it cannot be reliably inferred from the `Host` header in the request file.
 *   `-v`, `--verbose`: Enable verbose logging (INFO level). Shows major steps and decisions.
@@ -64,43 +56,43 @@ python3 main.py <request_file_path> [options]
 1.  **Basic trimming (Headers, Cookies, Query Params) and print to console:**
 
     ```bash
-    python3 run_trimmer.py /path/to/your/request.txt
+    python3 run_trimmer.py /path/to/your/raw_http_request.txt
     ```
 
 2.  **Trim and save the result to a file:**
 
     ```bash
-    python3 run_trimmer.py request.txt -o trimmed_request.txt
+    python3 run_trimmer.py raw_http_request.txt -o trimmed_request.txt
     ```
 
 3.  **Trim with verbose logging and increased length tolerance:**
 
     ```bash
-    python3 run_trimmer.py request.txt -v --length-tolerance 100
+    python3 run_trimmer.py raw_http_request.txt -v --length-tolerance 100
     ```
 
 4.  **Trim only Headers:**
 
     ```bash
-    python3 run_trimmer.py request.txt --headers-only
+    python3 run_trimmer.py raw_http_request.txt --headers-only
     ```
 
 5.  **Trim only Query Parameters and Cookies (disable Header trimming):**
 
     ```bash
-    python3 run_trimmer.py request.txt --no-trim-headers
+    python3 run_trimmer.py raw_http_request.txt --no-trim-headers
     ```
 
 6.  **Trim with debug logging and specify a base URL:**
 
     ```bash
-    python3 run_trimmer.py request_no_host.txt --base-url https://api.example.com -d
+    python3 run_trimmer.py raw_http_request_without_host.txt --base-url https://api.example.com -d
     ```
 
 7.  **Trim Query Parameters only and save output:**
 
     ```bash
-    python3 run_trimmer.py request.txt --query-params-only -o trimmed_query_only.txt
+    python3 run_trimmer.py raw_http_request.txt --query-params-only -o trimmed_query_only.txt
     ```
 
 ## How It Works
