@@ -3,11 +3,11 @@ import sys
 import logging
 import time
 from typing import Dict, List, Tuple, Any, Optional, Set
-from urllib.parse import urlparse
+import requests
 from .header_trimmer import HeaderTrimmer
 from .cookie_trimmer import CookieTrimmer
 from .query_trimmer import QueryTrimmer
-from .utils import logger, derive_base_url, parse_headers, parse_cookies, parse_query_params, parse_request, log_function_call, reset_request_counter, get_request_counter
+from .utils import logger, derive_base_url, parse_headers, parse_cookies, parse_query_params, parse_request, log_function_call, reset_request_counter, get_request_counter, increment_request_counter
 
 class RequestTrimmer:
     def __init__(self, raw_request: str, base_url: Optional[str] = None, length_tolerance: int = 10, 
@@ -48,139 +48,131 @@ class RequestTrimmer:
         logger.debug(f"Modules: trim_headers={trim_headers}, trim_cookies={trim_cookies}, trim_query_params={trim_query_params}")
     
     @log_function_call
+    def _get_initial_baseline_response(self) -> requests.Response:
+        """
+        Sends the initial raw request to establish the baseline response.
+        """
+        logger.info("Establishing initial baseline response...")
+        method, path, headers, payload = parse_request(self.raw_request)
+        url = f"{self.base_url}{path}"
+
+        logger.debug(f"Sending baseline request: {method} {url}")
+        start_time = time.time()
+        try:
+            increment_request_counter() # Count this baseline request
+            response = requests.request(
+                method=method,
+                url=url,
+                headers=headers,
+                data=payload,
+                timeout=self.timeout,
+                allow_redirects=False
+            )
+            end_time = time.time()
+            logger.debug(f"Baseline request completed in {end_time - start_time:.2f} seconds with status code {response.status_code}")
+            logger.debug(f"Baseline response length: {len(response.content)} bytes")
+            # Perform a basic check on the baseline response
+            if response.status_code >= 400:
+                 logger.warning(f"Baseline request resulted in status code {response.status_code}. Trimming results may be unreliable.")
+            return response
+        except requests.exceptions.Timeout:
+            logger.error(f"Baseline request timed out after {self.timeout} seconds. Cannot proceed with trimming.")
+            raise
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Baseline request failed: {str(e)}. Cannot proceed with trimming.")
+            raise
+
+    @log_function_call
     def trim_request(self) -> str:
         """
-        Trim the HTTP request by removing unnecessary headers, cookies, and query parameters.
-        
+        Trim the HTTP request by removing unnecessary headers, cookies, and query parameters sequentially.
+
         Returns:
             Trimmed raw HTTP request as a string
         """
-        logger.info("Starting request trimming process")
-        
-        # Reset the request counter before starting
-        reset_request_counter()
-        
-        # Step 1: Trim headers
-        unnecessary_headers = set()
-        header_trimmer = None
-        
+        logger.info("Starting sequential request trimming process")
+        reset_request_counter() # Reset counter at the start of the process
+
+        # --- Step 0: Establish Baseline ---
+        try:
+            baseline_response = self._get_initial_baseline_response()
+        except Exception as e:
+             logger.error(f"Failed to get baseline response: {e}. Aborting trim.")
+             # Return the original request if baseline fails, maybe add an option?
+             return self.raw_request
+
+        # Initialize the request to be modified
+        current_request = self.raw_request
+        logger.debug(f"Initial request length: {len(current_request)}")
+
+        # --- Step 1: Trim Headers ---
         if self.trim_headers:
             logger.info("Step 1: Trimming headers...")
-            header_trimmer = HeaderTrimmer(
-                self.base_url, 
-                self.raw_request, 
-                None, 
-                self.length_tolerance, 
-                self.timeout
-            )
-            baseline_response = header_trimmer._get_baseline_response()
-            unnecessary_headers = header_trimmer.find_unnecessary_headers(baseline_response)
-            logger.info(f"Found {len(unnecessary_headers)} unnecessary headers: {', '.join(unnecessary_headers) if unnecessary_headers else 'None'}")
+            try:
+                header_trimmer = HeaderTrimmer(
+                    self.base_url,
+                    current_request, # Start with the current request
+                    baseline_response, # Pass the single baseline response
+                    self.length_tolerance,
+                    self.timeout
+                )
+                # find_unnecessary_items returns the *new* trimmed request string
+                current_request = header_trimmer.find_unnecessary_items()
+                logger.info("Header trimming completed.")
+                logger.debug(f"Request after header trim length: {len(current_request)}")
+            except Exception as e:
+                logger.error(f"Error during header trimming: {e}. Skipping header trimming.")
         else:
-            logger.info("Skipping header trimming as requested")
-            header_trimmer = HeaderTrimmer(
-                self.base_url, 
-                self.raw_request, 
-                None, 
-                self.length_tolerance, 
-                self.timeout
-            )
-            baseline_response = header_trimmer._get_baseline_response()
-        
-        # Step 2: Trim cookies
-        unnecessary_cookies = set()
-        necessary_cookies = set()
-        
+            logger.info("Skipping header trimming as requested.")
+
+        # --- Step 2: Trim Cookies ---
+        # Pass the request *after* header trimming (if done)
         if self.trim_cookies:
             logger.info("Step 2: Trimming cookies...")
-            cookie_trimmer = CookieTrimmer(
-                self.base_url, 
-                self.raw_request, 
-                baseline_response, 
-                self.length_tolerance, 
-                self.timeout
-            )
-            unnecessary_cookies = cookie_trimmer.find_unnecessary_cookies(baseline_response)
-            necessary_cookies = set(cookie_trimmer.cookies.keys()) - unnecessary_cookies
-            logger.info(f"Found {len(unnecessary_cookies)} unnecessary cookies: {', '.join(unnecessary_cookies) if unnecessary_cookies else 'None'}")
+            try:
+                cookie_trimmer = CookieTrimmer(
+                    self.base_url,
+                    current_request, # Use request potentially modified by header trimmer
+                    baseline_response,
+                    self.length_tolerance,
+                    self.timeout
+                )
+                current_request = cookie_trimmer.find_unnecessary_items()
+                logger.info("Cookie trimming completed.")
+                logger.debug(f"Request after cookie trim length: {len(current_request)}")
+            except Exception as e:
+                 logger.error(f"Error during cookie trimming: {e}. Skipping cookie trimming.")
         else:
-            logger.info("Skipping cookie trimming as requested")
-            # Get all cookies from the request
-            necessary_cookies = set(parse_cookies(parse_headers(self.raw_request).get('Cookie', '')).keys())
-        
-        # Step 3: Trim query parameters
-        unnecessary_params = set()
-        necessary_params = set()
-        
+            logger.info("Skipping cookie trimming as requested.")
+
+        # --- Step 3: Trim Query Parameters ---
+        # Pass the request *after* header and cookie trimming (if done)
         if self.trim_query_params:
             logger.info("Step 3: Trimming query parameters...")
-            query_trimmer = QueryTrimmer(
-                self.base_url, 
-                self.raw_request, 
-                baseline_response, 
-                self.length_tolerance, 
-                self.timeout
-            )
-            unnecessary_params = query_trimmer.find_unnecessary_params(baseline_response)
-            necessary_params = set(query_trimmer.query_params.keys()) - unnecessary_params
-            logger.info(f"Found {len(unnecessary_params)} unnecessary query parameters: {', '.join(unnecessary_params) if unnecessary_params else 'None'}")
+            try:
+                query_trimmer = QueryTrimmer(
+                    self.base_url,
+                    current_request, # Use request potentially modified by previous steps
+                    baseline_response,
+                    self.length_tolerance,
+                    self.timeout
+                )
+                current_request = query_trimmer.find_unnecessary_items()
+                logger.info("Query parameter trimming completed.")
+                logger.debug(f"Request after query param trim length: {len(current_request)}")
+            except Exception as e:
+                 logger.error(f"Error during query parameter trimming: {e}. Skipping query parameter trimming.")
+
         else:
-            logger.info("Skipping query parameter trimming as requested")
-            # Get all query parameters from the request
-            method, path, _ = parse_request(self.raw_request)
-            necessary_params = set(parse_query_params(path).keys())
-        
-        # Construct trimmed request
-        logger.info("Constructing trimmed request")
-        request_lines = []
-        
-        # Add request line (method + path)
-        method, path, _ = header_trimmer.method, header_trimmer.path, header_trimmer.payload
-        
-        # Modify path if we trimmed query parameters
-        if self.trim_query_params and unnecessary_params:
-            from urllib.parse import urlparse, parse_qs, urlencode
-            parsed_url = urlparse(path)
-            query_params = parse_qs(parsed_url.query)
-            
-            # Remove unnecessary parameters
-            for param in unnecessary_params:
-                if param in query_params:
-                    del query_params[param]
-            
-            # Reconstruct path
-            if query_params:
-                query_string = urlencode(query_params, doseq=True)
-                path = f"{parsed_url.path}?{query_string}"
-            else:
-                path = parsed_url.path
-        
-        request_lines.append(f"{method} {path} HTTP/1.1")
-        
-        # Add headers (excluding unnecessary ones)
-        for header, value in header_trimmer.headers.items():
-            if header not in unnecessary_headers:
-                if header == 'Cookie' and self.trim_cookies and unnecessary_cookies:
-                    # Modify Cookie header to only include necessary cookies
-                    cookies = parse_cookies(value)
-                    necessary_cookie_dict = {k: v for k, v in cookies.items() if k in necessary_cookies}
-                    if necessary_cookie_dict:
-                        cookie_str = '; '.join([f"{k}={v}" for k, v in necessary_cookie_dict.items()])
-                        request_lines.append(f"{header}: {cookie_str}")
-                else:
-                    request_lines.append(f"{header}: {value}")
-            
-        if header_trimmer.payload:
-            request_lines.append("")
-            request_lines.append(header_trimmer.payload)
-        
-        trimmed_request = '\n'.join(request_lines)
-        
-        # Get the total number of HTTP requests made
+            logger.info("Skipping query parameter trimming as requested.")
+
+        # --- Finalization ---
+        final_trimmed_request = current_request
         total_requests = get_request_counter()
-        logger.info(f"Request trimming completed. Total HTTP requests made: {total_requests}")
-        
-        return trimmed_request
+        logger.info(f"Sequential request trimming completed. Final request length: {len(final_trimmed_request)}")
+        logger.info(f"Total HTTP requests made (including baseline): {total_requests}")
+
+        return final_trimmed_request
     
     def generate_report(self, trimmed_request: str) -> Dict[str, Any]:
         """

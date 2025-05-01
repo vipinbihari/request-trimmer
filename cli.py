@@ -5,7 +5,6 @@ import sys
 import logging
 import time
 from typing import Dict, List, Tuple, Any, Optional, Set
-from urllib.parse import urlparse
 from request_trimmer.main import RequestTrimmer
 from request_trimmer.utils import logger, derive_base_url, reset_request_counter, get_request_counter
 
