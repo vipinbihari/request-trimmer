@@ -1,0 +1,88 @@
+2025-05-01 17:51:00,502 - __main__ - INFO - Starting request_trimmer with log level: INFO
+2025-05-01 17:51:00,503 - __main__ - INFO - Reading request file: request.txt
+2025-05-01 17:51:00,512 - __main__ - INFO - Creating RequestTrimmer instance
+2025-05-01 17:51:00,512 - __main__ - INFO - Initializing RequestTrimmer
+2025-05-01 17:51:00,512 - __main__ - INFO - Derived base URL: https://mail.google.com
+2025-05-01 17:51:00,513 - __main__ - INFO - Starting sequential request trimming process
+2025-05-01 17:51:00,513 - __main__ - INFO - Establishing initial baseline response...
+2025-05-01 17:51:01,560 - __main__ - INFO - Step 1: Trimming headers...
+2025-05-01 17:51:01,561 - utils - INFO - Initializing HeaderTrimmer with base_url=https://mail.google.com, timeout=10
+2025-05-01 17:51:01,561 - utils - INFO - Testing 16 headers using divide and conquer (excluding essential: {'transfer-encoding', 'host', 'content-length', 'user-agent'})
+2025-05-01 17:51:01,561 - utils - INFO - Dividing 16 headers into Group 1 (8) and Group 2 (8)
+2025-05-01 17:51:01,561 - utils - INFO - Testing Group 1 headers by removing: {'Accept-Encoding', 'Origin', 'Priority', 'Sec-Fetch-Mode', 'Sec-Ch-Ua-Mobile', 'Accept-Language', 'Sec-Ch-Ua', 'Sec-Ch-Ua-Platform'}
+2025-05-01 17:51:02,216 - utils - INFO - Response length comparison: baseline=7 bytes, test=7 bytes, difference=0 bytes (tolerance: 100 bytes)
+2025-05-01 17:51:02,216 - utils - INFO - Responses match: same status code and length within tolerance (0 bytes difference)
+2025-05-01 17:51:02,216 - utils - INFO - All headers in Group 1 are unnecessary: {'Accept-Encoding', 'Origin', 'Priority', 'Sec-Fetch-Mode', 'Sec-Ch-Ua-Mobile', 'Accept-Language', 'Sec-Ch-Ua', 'Sec-Ch-Ua-Platform'}
+2025-05-01 17:51:02,216 - utils - INFO - Testing Group 2 headers by removing: {'Sec-Fetch-Dest', 'X-Xsrf-Asfe-Token', 'X-Client-Data', 'Cookie', 'Referer', 'Sec-Fetch-Site', 'Content-Type', 'Accept'}
+2025-05-01 17:51:02,875 - utils - INFO - Response length comparison: baseline=7 bytes, test=7 bytes, difference=0 bytes (tolerance: 100 bytes)
+2025-05-01 17:51:02,875 - utils - INFO - Responses match: same status code and length within tolerance (0 bytes difference)
+2025-05-01 17:51:02,875 - utils - INFO - All headers in Group 2 are unnecessary: {'Sec-Fetch-Dest', 'X-Xsrf-Asfe-Token', 'X-Client-Data', 'Cookie', 'Referer', 'Sec-Fetch-Site', 'Content-Type', 'Accept'}
+2025-05-01 17:51:02,878 - utils - INFO - Found 16 unnecessary headers: {'Accept-Encoding', 'Sec-Fetch-Site', 'Origin', 'Sec-Fetch-Dest', 'X-Xsrf-Asfe-Token', 'X-Client-Data', 'Priority', 'Cookie', 'Sec-Fetch-Mode', 'Referer', 'Sec-Ch-Ua-Mobile', 'Accept', 'Accept-Language', 'Sec-Ch-Ua', 'Content-Type', 'Sec-Ch-Ua-Platform'}
+2025-05-01 17:51:02,879 - utils - INFO - Reconstructing request, removing 16 unnecessary header(s): {'Accept-Encoding', 'Sec-Fetch-Site', 'Origin', 'Sec-Fetch-Dest', 'X-Xsrf-Asfe-Token', 'X-Client-Data', 'Priority', 'Cookie', 'Sec-Fetch-Mode', 'Referer', 'Sec-Ch-Ua-Mobile', 'Accept', 'Accept-Language', 'Sec-Ch-Ua', 'Content-Type', 'Sec-Ch-Ua-Platform'}
+2025-05-01 17:51:02,879 - __main__ - INFO - Header trimming completed.
+2025-05-01 17:51:02,879 - __main__ - INFO - Step 2: Trimming cookies...
+2025-05-01 17:51:02,879 - utils - INFO - Initializing CookieTrimmer with base_url=https://mail.google.com, timeout=10
+2025-05-01 17:51:02,880 - utils - INFO - No cookies found in the initial request. Skipping cookie trimming.
+2025-05-01 17:51:02,880 - __main__ - INFO - Cookie trimming completed.
+2025-05-01 17:51:02,880 - __main__ - INFO - Step 3: Trimming query parameters...
+2025-05-01 17:51:02,880 - utils - INFO - Initializing QueryTrimmer with base_url=https://mail.google.com, timeout=10
+2025-05-01 17:51:02,881 - query_trimmer - INFO - Testing 11 query parameters using divide and conquer
+2025-05-01 17:51:02,881 - utils - INFO - Dividing 11 querys into Group 1 (5) and Group 2 (6)
+2025-05-01 17:51:02,881 - utils - INFO - Testing Group 1 querys by removing: {'gs_rn', 'client', 'view', 'em', 'hl'}
+2025-05-01 17:51:03,532 - utils - INFO - Response length comparison: baseline=7 bytes, test=7 bytes, difference=0 bytes (tolerance: 100 bytes)
+2025-05-01 17:51:03,532 - utils - INFO - Responses match: same status code and length within tolerance (0 bytes difference)
+2025-05-01 17:51:03,532 - utils - INFO - All querys in Group 1 are unnecessary: {'gs_rn', 'client', 'view', 'em', 'hl'}
+2025-05-01 17:51:03,532 - utils - INFO - Testing Group 2 querys by removing: {'cp', 'zx', 'authuser', 'at', 'gs_ri', 'gs_id'}
+2025-05-01 17:51:04,189 - utils - INFO - Response length comparison: baseline=7 bytes, test=7 bytes, difference=0 bytes (tolerance: 100 bytes)
+2025-05-01 17:51:04,189 - utils - INFO - Responses match: same status code and length within tolerance (0 bytes difference)
+2025-05-01 17:51:04,189 - utils - INFO - All querys in Group 2 are unnecessary: {'cp', 'zx', 'authuser', 'at', 'gs_ri', 'gs_id'}
+2025-05-01 17:51:04,192 - query_trimmer - INFO - Found 11 unnecessary query parameters: {'gs_rn', 'client', 'view', 'em', 'hl', 'cp', 'zx', 'authuser', 'at', 'gs_ri', 'gs_id'}
+2025-05-01 17:51:04,193 - query_trimmer - INFO - Reconstructing request, removing 11 unnecessary query(s): {'gs_rn', 'client', 'view', 'em', 'hl', 'cp', 'zx', 'authuser', 'at', 'gs_ri', 'gs_id'}
+2025-05-01 17:51:04,193 - __main__ - ERROR - Error during query parameter trimming: name 'format_headers' is not defined. Skipping query parameter trimming.
+2025-05-01 17:51:04,193 - __main__ - INFO - Sequential request trimming completed. Final request length: 776
+2025-05-01 17:51:04,193 - __main__ - INFO - Total HTTP requests made (including baseline): 5
+2025-05-01 17:51:04,195 - __main__ - INFO - Total HTTP requests made: 5
+2025-05-01 17:52:03,289 - __main__ - INFO - Starting request_trimmer with log level: INFO
+2025-05-01 17:52:03,290 - __main__ - INFO - Reading request file: request.txt
+2025-05-01 17:52:03,290 - __main__ - INFO - Creating RequestTrimmer instance
+2025-05-01 17:52:03,290 - __main__ - INFO - Initializing RequestTrimmer
+2025-05-01 17:52:03,291 - __main__ - INFO - Derived base URL: https://mail.google.com
+2025-05-01 17:52:03,291 - __main__ - INFO - Starting sequential request trimming process
+2025-05-01 17:52:03,291 - __main__ - INFO - Establishing initial baseline response...
+2025-05-01 17:52:07,018 - __main__ - INFO - Step 1: Trimming headers...
+2025-05-01 17:52:07,019 - utils - INFO - Initializing HeaderTrimmer with base_url=https://mail.google.com, timeout=10
+2025-05-01 17:52:07,019 - utils - INFO - Testing 16 headers using divide and conquer (excluding essential: {'host', 'content-length', 'user-agent', 'transfer-encoding'})
+2025-05-01 17:52:07,019 - utils - INFO - Dividing 16 headers into Group 1 (8) and Group 2 (8)
+2025-05-01 17:52:07,019 - utils - INFO - Testing Group 1 headers by removing: {'Sec-Ch-Ua', 'Sec-Fetch-Dest', 'Referer', 'Accept-Language', 'Sec-Fetch-Site', 'Sec-Ch-Ua-Mobile', 'Priority', 'X-Xsrf-Asfe-Token'}
+2025-05-01 17:52:07,769 - utils - INFO - Response length comparison: baseline=7 bytes, test=7 bytes, difference=0 bytes (tolerance: 100 bytes)
+2025-05-01 17:52:07,769 - utils - INFO - Responses match: same status code and length within tolerance (0 bytes difference)
+2025-05-01 17:52:07,769 - utils - INFO - All headers in Group 1 are unnecessary: {'Sec-Ch-Ua', 'Sec-Fetch-Dest', 'Referer', 'Accept-Language', 'Sec-Fetch-Site', 'Sec-Ch-Ua-Mobile', 'Priority', 'X-Xsrf-Asfe-Token'}
+2025-05-01 17:52:07,770 - utils - INFO - Testing Group 2 headers by removing: {'Origin', 'Accept-Encoding', 'Cookie', 'Accept', 'Sec-Ch-Ua-Platform', 'X-Client-Data', 'Content-Type', 'Sec-Fetch-Mode'}
+2025-05-01 17:52:08,340 - utils - INFO - Response length comparison: baseline=7 bytes, test=7 bytes, difference=0 bytes (tolerance: 100 bytes)
+2025-05-01 17:52:08,341 - utils - INFO - Responses match: same status code and length within tolerance (0 bytes difference)
+2025-05-01 17:52:08,341 - utils - INFO - All headers in Group 2 are unnecessary: {'Origin', 'Accept-Encoding', 'Cookie', 'Accept', 'Sec-Ch-Ua-Platform', 'X-Client-Data', 'Content-Type', 'Sec-Fetch-Mode'}
+2025-05-01 17:52:08,343 - utils - INFO - Found 16 unnecessary headers: {'Sec-Ch-Ua-Platform', 'Sec-Ch-Ua', 'Sec-Fetch-Dest', 'Origin', 'Referer', 'Accept-Language', 'Sec-Fetch-Site', 'Accept-Encoding', 'Cookie', 'Accept', 'Sec-Ch-Ua-Mobile', 'X-Client-Data', 'Priority', 'X-Xsrf-Asfe-Token', 'Content-Type', 'Sec-Fetch-Mode'}
+2025-05-01 17:52:08,344 - utils - INFO - Reconstructing request, removing 16 unnecessary header(s): {'Sec-Ch-Ua-Platform', 'Sec-Ch-Ua', 'Sec-Fetch-Dest', 'Origin', 'Referer', 'Accept-Language', 'Sec-Fetch-Site', 'Accept-Encoding', 'Cookie', 'Accept', 'Sec-Ch-Ua-Mobile', 'X-Client-Data', 'Priority', 'X-Xsrf-Asfe-Token', 'Content-Type', 'Sec-Fetch-Mode'}
+2025-05-01 17:52:08,344 - __main__ - INFO - Header trimming completed.
+2025-05-01 17:52:08,344 - __main__ - INFO - Step 2: Trimming cookies...
+2025-05-01 17:52:08,344 - utils - INFO - Initializing CookieTrimmer with base_url=https://mail.google.com, timeout=10
+2025-05-01 17:52:08,344 - utils - INFO - No cookies found in the initial request. Skipping cookie trimming.
+2025-05-01 17:52:08,345 - __main__ - INFO - Cookie trimming completed.
+2025-05-01 17:52:08,345 - __main__ - INFO - Step 3: Trimming query parameters...
+2025-05-01 17:52:08,345 - utils - INFO - Initializing QueryTrimmer with base_url=https://mail.google.com, timeout=10
+2025-05-01 17:52:08,346 - query_trimmer - INFO - Testing 11 query parameters using divide and conquer
+2025-05-01 17:52:08,346 - utils - INFO - Dividing 11 querys into Group 1 (5) and Group 2 (6)
+2025-05-01 17:52:08,346 - utils - INFO - Testing Group 1 querys by removing: {'gs_rn', 'hl', 'authuser', 'zx', 'gs_ri'}
+2025-05-01 17:52:08,895 - utils - INFO - Response length comparison: baseline=7 bytes, test=7 bytes, difference=0 bytes (tolerance: 100 bytes)
+2025-05-01 17:52:08,896 - utils - INFO - Responses match: same status code and length within tolerance (0 bytes difference)
+2025-05-01 17:52:08,896 - utils - INFO - All querys in Group 1 are unnecessary: {'gs_rn', 'hl', 'authuser', 'zx', 'gs_ri'}
+2025-05-01 17:52:08,896 - utils - INFO - Testing Group 2 querys by removing: {'client', 'gs_id', 'cp', 'at', 'em', 'view'}
+2025-05-01 17:52:09,553 - utils - INFO - Response length comparison: baseline=7 bytes, test=7 bytes, difference=0 bytes (tolerance: 100 bytes)
+2025-05-01 17:52:09,553 - utils - INFO - Responses match: same status code and length within tolerance (0 bytes difference)
+2025-05-01 17:52:09,553 - utils - INFO - All querys in Group 2 are unnecessary: {'client', 'gs_id', 'cp', 'at', 'em', 'view'}
+2025-05-01 17:52:09,556 - query_trimmer - INFO - Found 11 unnecessary query parameters: {'gs_rn', 'hl', 'authuser', 'zx', 'gs_ri', 'client', 'gs_id', 'cp', 'at', 'em', 'view'}
+2025-05-01 17:52:09,556 - query_trimmer - INFO - Reconstructing request, removing 11 unnecessary query(s): {'gs_rn', 'hl', 'authuser', 'zx', 'gs_ri', 'client', 'gs_id', 'cp', 'at', 'em', 'view'}
+2025-05-01 17:52:09,557 - __main__ - INFO - Query parameter trimming completed.
+2025-05-01 17:52:09,557 - __main__ - INFO - Sequential request trimming completed. Final request length: 617
+2025-05-01 17:52:09,557 - __main__ - INFO - Total HTTP requests made (including baseline): 5
+2025-05-01 17:52:09,558 - __main__ - INFO - Total HTTP requests made: 5

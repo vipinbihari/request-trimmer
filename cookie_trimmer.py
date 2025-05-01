@@ -1,9 +1,8 @@
 import requests
+import time
 import logging
 from typing import Dict, List, Tuple, Any, Optional, Set
-from .utils import logger, BaseTrimmer, parse_cookies, log_function_call, increment_request_counter, format_cookies, format_headers
-import time
-from functools import wraps
+from utils import logger, BaseTrimmer, parse_cookies, log_function_call, increment_request_counter, format_cookies, format_headers
 
 class CookieTrimmer(BaseTrimmer):
     def __init__(self, base_url: str, raw_request: str, baseline_response: requests.Response,

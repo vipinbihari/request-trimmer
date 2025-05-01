@@ -2,7 +2,7 @@ import requests
 import logging
 import time
 from typing import Dict, List, Tuple, Any, Optional, Set
-from .utils import logger, BaseTrimmer, log_function_call, increment_request_counter
+from utils import logger, BaseTrimmer, log_function_call, increment_request_counter
 
 class HeaderTrimmer(BaseTrimmer):
     def __init__(self, base_url: str, raw_request: str, baseline_response: requests.Response,
@@ -74,7 +74,7 @@ class HeaderTrimmer(BaseTrimmer):
         # Filter out Host and Content-Length as they are often essential and auto-managed
         # Also filter potentially sensitive headers like Authorization
         # Convert keys to lowercase for case-insensitive comparison
-        essential_headers_lower = {'host', 'authorization', 'user-agent'} # Added User-Agent as potentially essential
+        essential_headers_lower = {'host', 'user-agent', 'content-length', 'transfer-encoding'} # Added User-Agent as potentially essential
         all_header_keys = {k for k in self.headers.keys() if k.lower() not in essential_headers_lower}
         unnecessary_headers = set()
 

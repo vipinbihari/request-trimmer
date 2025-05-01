@@ -1,10 +1,12 @@
 import requests
-import logging
-from urllib.parse import urlparse, urlencode, urlunparse
-from typing import Dict, List, Tuple, Any, Optional, Set
-from .utils import logger, BaseTrimmer, parse_query_params, log_function_call, increment_request_counter, format_headers, format_query_params
 import time
-from functools import wraps
+import logging
+from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
+from typing import Dict, Set, Tuple, List, Optional
+
+from utils import BaseTrimmer, format_query_params, log_function_call, increment_request_counter, parse_query_params, format_headers
+
+logger = logging.getLogger(__name__)
 
 class QueryTrimmer(BaseTrimmer):
     def __init__(self, base_url: str, raw_request: str, baseline_response: requests.Response,

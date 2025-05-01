@@ -1,16 +1,26 @@
-import argparse
-import sys
-import logging
-import time
-from typing import Dict, List, Tuple, Any, Optional, Set
 import requests
-from .header_trimmer import HeaderTrimmer
-from .cookie_trimmer import CookieTrimmer
-from .query_trimmer import QueryTrimmer
-from .utils import logger, derive_base_url, parse_headers, parse_cookies, parse_query_params, parse_request, log_function_call, reset_request_counter, get_request_counter, increment_request_counter
+import time
+import logging
+import argparse
+import os
+import sys
+from typing import Optional, Tuple, Dict
+
+from utils import (
+    parse_request, derive_base_url, 
+    get_request_counter, increment_request_counter, log_function_call, 
+    reset_request_counter
+)
+from header_trimmer import HeaderTrimmer
+from cookie_trimmer import CookieTrimmer
+from query_trimmer import QueryTrimmer
+
+# Configure logging at the module level
+logger = logging.getLogger(__name__)
+
 
 class RequestTrimmer:
-    def __init__(self, raw_request: str, base_url: Optional[str] = None, length_tolerance: int = 10, 
+    def __init__(self, raw_request: str, base_url: Optional[str] = None, length_tolerance: int = 50, 
                  timeout: int = 10, trim_headers: bool = True,
                  trim_cookies: bool = True, trim_query_params: bool = True):
         """
@@ -174,7 +184,7 @@ class RequestTrimmer:
 
         return final_trimmed_request
     
-    def generate_report(self, trimmed_request: str) -> Dict[str, Any]:
+    def generate_report(self, trimmed_request: str) -> Dict[str, Dict[str, int]]:
         """
         Generate a report of the trimming process.
         
@@ -187,32 +197,30 @@ class RequestTrimmer:
         logger.info("Generating trimming report")
         
         # Parse headers from raw and trimmed requests
-        raw_headers = parse_headers('\n'.join([line for line in self.raw_request.split('\n') 
-                                              if ': ' in line and not line.startswith('PAYLOAD')]))
-        trimmed_headers = parse_headers('\n'.join([line for line in trimmed_request.split('\n') 
-                                                 if ': ' in line]))
+        raw_headers = parse_request(self.raw_request)[2]
+        trimmed_headers = parse_request(trimmed_request)[2]
         
         # Determine which headers were removed
         unnecessary_headers = set(raw_headers.keys()) - set(trimmed_headers.keys())
         
         # Parse cookies from raw and trimmed requests
-        raw_cookies = parse_cookies(raw_headers.get('Cookie', ''))
-        trimmed_cookies = parse_cookies(trimmed_headers.get('Cookie', ''))
+        raw_cookies = raw_headers.get('Cookie', '')
+        trimmed_cookies = trimmed_headers.get('Cookie', '')
         
         # Determine which cookies were removed
-        unnecessary_cookies = set(raw_cookies.keys()) - set(trimmed_cookies.keys())
-        necessary_cookies = set(trimmed_cookies.keys())
+        unnecessary_cookies = set(raw_cookies.split('; ')) - set(trimmed_cookies.split('; '))
+        necessary_cookies = set(trimmed_cookies.split('; '))
         
         # Parse query parameters from raw and trimmed requests
-        method, raw_path, _ = parse_request(self.raw_request)
+        _, raw_path, _ = parse_request(self.raw_request)
         _, trimmed_path, _ = parse_request(trimmed_request)
         
-        raw_params = parse_query_params(raw_path)
-        trimmed_params = parse_query_params(trimmed_path)
+        raw_params = raw_path.split('?')[1].split('&') if '?' in raw_path else []
+        trimmed_params = trimmed_path.split('?')[1].split('&') if '?' in trimmed_path else []
         
         # Determine which parameters were removed
-        unnecessary_params = set(raw_params.keys()) - set(trimmed_params.keys())
-        necessary_params = set(trimmed_params.keys())
+        unnecessary_params = set(raw_params) - set(trimmed_params)
+        necessary_params = set(trimmed_params)
         
         # Get the total number of HTTP requests made
         total_requests = get_request_counter()
@@ -222,7 +230,7 @@ class RequestTrimmer:
             "original": {
                 "size": len(self.raw_request),
                 "headers_count": len(raw_headers),
-                "cookies_count": len(raw_cookies),
+                "cookies_count": len(raw_cookies.split('; ')),
                 "query_params_count": len(raw_params)
             },
             "trimmed": {
@@ -244,123 +252,106 @@ class RequestTrimmer:
         return report
 
 def main():
-    parser = argparse.ArgumentParser(description='Trim HTTP requests by removing unnecessary headers, cookies, and query parameters')
-    parser.add_argument('request_file', help='File containing the raw HTTP request')
-    parser.add_argument('--output', '-o', help='Output file for the trimmed request')
-    parser.add_argument('--base-url', help='Base URL for the request (optional)')
-    parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose logging (DEBUG level)')
-    parser.add_argument('--debug', '-d', action='store_true', help='Enable debug mode (INFO level logs)')
-    parser.add_argument('--report', '-r', action='store_true', help='Generate a trimming report')
-    parser.add_argument('--length-tolerance', '-lt', type=int, default=10, 
-                        help='Maximum allowed difference in response length in bytes (default: 50)')
-    parser.add_argument('--timeout', '-t', type=int, default=10,
-                        help='Timeout for HTTP requests in seconds (default: 10)')
-    parser.add_argument('--trim-headers', action='store_true', default=True,
-                        help='Trim unnecessary headers (default: True)')
-    parser.add_argument('--trim-cookies', action='store_true', default=True,
-                        help='Trim unnecessary cookies (default: True)')
-    parser.add_argument('--trim-query-params', action='store_true', default=True,
-                        help='Trim unnecessary query parameters (default: True)')
-    parser.add_argument('--headers-only', action='store_true', 
-                        help='Only trim headers (shortcut for --trim-headers --no-trim-cookies --no-trim-query-params)')
-    parser.add_argument('--cookies-only', action='store_true', 
-                        help='Only trim cookies (shortcut for --no-trim-headers --trim-cookies --no-trim-query-params)')
-    parser.add_argument('--query-params-only', action='store_true', 
-                        help='Only trim query parameters (shortcut for --no-trim-headers --no-trim-cookies --trim-query-params)')
-    parser.add_argument('--no-trim-headers', action='store_false', dest='trim_headers',
-                        help='Do not trim headers')
-    parser.add_argument('--no-trim-cookies', action='store_false', dest='trim_cookies',
-                        help='Do not trim cookies')
-    parser.add_argument('--no-trim-query-params', action='store_false', dest='trim_query_params',
-                        help='Do not trim query parameters')
-    
+    parser = argparse.ArgumentParser(description='Trims unnecessary headers, cookies, and query parameters from a raw HTTP request.')
+    parser.add_argument('request_file', help='Path to the raw HTTP request file.')
+    parser.add_argument('-o', '--output', help='Path to save the trimmed request file.')
+    parser.add_argument('--base-url', help='Base URL (e.g., https://example.com) if not inferrable from Host header.')
+    parser.add_argument('-v', '--verbose', action='store_true', help='Enable verbose logging (INFO level).')
+    parser.add_argument('-d', '--debug', action='store_true', help='Enable debug logging (DEBUG level).')
+    parser.add_argument('--report', action='store_true', help='Print a summary report of trimmed items.')
+    parser.add_argument('--length-tolerance', type=int, default=50, help='Byte tolerance for response length comparison.')
+    parser.add_argument('--timeout', type=int, default=10, help='Request timeout in seconds.')
+    parser.add_argument('--no-trim-headers', dest='trim_headers', action='store_false', help='Disable header trimming.')
+    parser.add_argument('--no-trim-cookies', dest='trim_cookies', action='store_false', help='Disable cookie trimming.')
+    parser.add_argument('--no-trim-query-params', dest='trim_query_params', action='store_false', help='Disable query parameter trimming.')
+    # Options to trim only specific parts (can be combined)
+    parser.add_argument('--headers-only', action='store_true', help='Only trim headers.')
+    parser.add_argument('--cookies-only', action='store_true', help='Only trim cookies.')
+    parser.add_argument('--query-params-only', action='store_true', help='Only trim query parameters.')
+
     args = parser.parse_args()
-    
-    # Configure logging
-    if args.verbose:
+
+    # --- Logging Setup ---
+    log_level = logging.WARNING  # Default level
+    if args.debug:
         log_level = logging.DEBUG
-    elif args.debug:
+    elif args.verbose: # Debug implies verbose
         log_level = logging.INFO
-    else:
-        log_level = logging.WARNING
-    
-    logging.basicConfig(
-        level=log_level,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.StreamHandler(sys.stdout),
-            logging.FileHandler('request_trimmer.log')
-        ]
-    )
-    logger.setLevel(log_level)
+
+    # Get the root logger and set its level
+    # This affects all loggers unless they have their own level set
+    logging.getLogger().setLevel(log_level) 
+    # Alternatively, set level only for this specific module's logger:
+    # logger.setLevel(log_level)
+
     logger.info(f"Starting request_trimmer with log level: {logging.getLevelName(log_level)}")
     logger.debug(f"Command line arguments: {args}")
-    
-    # Process shortcut arguments
-    if args.headers_only:
-        args.trim_headers = True
-        args.trim_cookies = False
-        args.trim_query_params = False
-    elif args.cookies_only:
-        args.trim_headers = False
-        args.trim_cookies = True
-        args.trim_query_params = False
-    elif args.query_params_only:
-        args.trim_headers = False
-        args.trim_cookies = False
-        args.trim_query_params = True
-    
-    # Read request file
+
+    # --- Determine which parts to trim --- 
+    trim_headers_flag = args.trim_headers
+    trim_cookies_flag = args.trim_cookies
+    trim_query_params_flag = args.trim_query_params
+
+    # Handle mutually exclusive flags if only one type is requested
+    only_flags_set = args.headers_only or args.cookies_only or args.query_params_only
+    if only_flags_set:
+        trim_headers_flag = args.headers_only
+        trim_cookies_flag = args.cookies_only
+        trim_query_params_flag = args.query_params_only
+        logger.info(f"Running in specific mode: Headers={trim_headers_flag}, Cookies={trim_cookies_flag}, QueryParams={trim_query_params_flag}")
+
+
+    # --- Read Request File ---
     logger.info(f"Reading request file: {args.request_file}")
     try:
-        with open(args.request_file, 'r') as f:
+        with open(args.request_file, 'r', encoding='utf-8') as f:
             raw_request = f.read()
         logger.debug(f"Read {len(raw_request)} characters from request file")
-    except Exception as e:
-        logger.error(f"Error reading request file: {str(e)}")
+    except FileNotFoundError:
+        logger.error(f"Error: Request file not found at {args.request_file}")
         sys.exit(1)
-    
-    # Create RequestTrimmer instance
+    except Exception as e:
+        logger.error(f"Error reading request file: {e}")
+        sys.exit(1)
+
+    # --- Initialize and Run Trimmer ---
     logger.info("Creating RequestTrimmer instance")
+    reset_request_counter() # Reset counter for this run
     try:
         trimmer = RequestTrimmer(
             raw_request=raw_request,
             base_url=args.base_url,
             length_tolerance=args.length_tolerance,
             timeout=args.timeout,
-            trim_headers=args.trim_headers,
-            trim_cookies=args.trim_cookies,
-            trim_query_params=args.trim_query_params
+            trim_headers=trim_headers_flag,
+            trim_cookies=trim_cookies_flag,
+            trim_query_params=trim_query_params_flag
         )
         
-        # Trim request
         trimmed_request = trimmer.trim_request()
-        
-        # Output trimmed request
-        if args.output:
-            logger.info(f"Writing trimmed request to {args.output}")
-            with open(args.output, 'w') as f:
-                f.write(trimmed_request)
-        else:
-            print("\nTrimmed request:")
-            print(trimmed_request)
-        
-        # Generate report if requested
-        if args.report:
-            logger.info("Generating report")
-            report = trimmer.generate_report(trimmed_request)
-            print("\nTrimming report:")
-            print(json.dumps(report, indent=2))
-            
-        # Print summary
-        total_requests = get_request_counter()
-        print(f"\nTotal HTTP requests made: {total_requests}")
-        
-    except Exception as e:
-        logger.error(f"Error trimming request: {str(e)}")
-        import traceback
-        logger.error(traceback.format_exc())
-        sys.exit(1)
 
-if __name__ == '__main__':
+        print("\nTrimmed request:")
+        print(trimmed_request)
+
+        if args.output:
+            logger.info(f"Saving trimmed request to: {args.output}")
+            try:
+                with open(args.output, 'w', encoding='utf-8') as f:
+                    f.write(trimmed_request)
+            except Exception as e:
+                logger.error(f"Error writing output file: {e}")
+        
+        if args.report:
+             # Placeholder for report generation if needed later
+             logger.info("Report generation requested (feature placeholder).")
+
+    except Exception as e:
+        # Catch potential errors during trimming initialization or process
+        logger.error(f"An error occurred during trimming: {e}", exc_info=args.debug) # Show traceback if debug
+        sys.exit(1)
+    finally:
+        # Always report the number of requests made
+        logger.info(f"Total HTTP requests made: {get_request_counter()}")
+
+if __name__ == "__main__":
     main()
